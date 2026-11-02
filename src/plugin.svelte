@@ -311,6 +311,60 @@
         if (entry) {
             entry.marker.setIcon(iconFor(entry));
             entry.marker.setZIndexOffset(zIndexFor(entry));
+            scheduleDeclutter();
+        }
+    };
+
+    // ---------- Étiquettes sans chevauchement ----------
+
+    const LABEL_HIDDEN = 'is-label-hidden';
+    const LABEL_MARGIN = 2;
+    let declutterFrame: number | null = null;
+
+    const labelPriority = (entry: BoatOnMap) =>
+        entry.boat.id === selectedId ? -2 : entry.boat.rang === 1 ? -1 : (entry.boat.rang ?? 999);
+
+    /**
+     * Masque les étiquettes qui en chevauchent une plus prioritaire
+     * (bateau sélectionné, puis leaders, puis meilleur rang).
+     */
+    const declutterLabels = () => {
+        declutterFrame = null;
+        if (!showLabels) {
+            return;
+        }
+        const placed: { left: number; top: number; right: number; bottom: number }[] = [];
+        const entries = [...boatsOnMap.values()]
+            .filter(({ cls }) => !hiddenClasses.has(cls.cle))
+            .sort((a, b) => labelPriority(a) - labelPriority(b));
+
+        for (const entry of entries) {
+            const element = entry.marker.getElement();
+            const label = element?.querySelector<HTMLElement>('.rdr-boat__label');
+            if (!element || !label) {
+                continue;
+            }
+            const point = map.latLngToContainerPoint(entry.marker.getLatLng());
+            // L'étiquette est positionnée à droite de la coque (voir .rdr-boat__label)
+            const box = {
+                left: point.x + 15 - LABEL_MARGIN,
+                top: point.y - 10 - LABEL_MARGIN,
+                right: point.x + 15 + label.offsetWidth + LABEL_MARGIN,
+                bottom: point.y - 10 + label.offsetHeight + LABEL_MARGIN,
+            };
+            const overlaps = placed.some(
+                p => box.left < p.right && box.right > p.left && box.top < p.bottom && box.bottom > p.top,
+            );
+            element.classList.toggle(LABEL_HIDDEN, overlaps);
+            if (!overlaps) {
+                placed.push(box);
+            }
+        }
+    };
+
+    const scheduleDeclutter = () => {
+        if (declutterFrame === null && !destroyed) {
+            declutterFrame = requestAnimationFrame(declutterLabels);
         }
     };
 
@@ -365,6 +419,8 @@
                 boatsOnMap.delete(id);
             }
         }
+
+        scheduleDeclutter();
 
         // Met à jour le popup ouvert avec les nouvelles valeurs
         const selected = selectedId ? boatsOnMap.get(selectedId) : undefined;
@@ -443,6 +499,7 @@
         }
         hiddenClasses = next;
         savePrefs();
+        scheduleDeclutter();
     };
 
     const onLabelsChange = () => {
@@ -549,10 +606,19 @@
         addLandmarks();
         refresh();
         clockTimer = setInterval(() => (now = Date.now()), 60_000);
+        map.on('zoomend', scheduleDeclutter);
+        map.on('moveend', scheduleDeclutter);
+        // Les polices changent la largeur des étiquettes une fois chargées
+        document.fonts?.ready.then(scheduleDeclutter);
     });
 
     onDestroy(() => {
         destroyed = true;
+        map.off('zoomend', scheduleDeclutter);
+        map.off('moveend', scheduleDeclutter);
+        if (declutterFrame !== null) {
+            cancelAnimationFrame(declutterFrame);
+        }
         pendingRequest?.abort();
         if (refreshTimer) {
             clearTimeout(refreshTimer);
@@ -1084,6 +1150,10 @@
         line-height: 18px;
         white-space: nowrap;
         pointer-events: none;
+    }
+    // visibility (et non display) pour que la largeur reste mesurable
+    :global(.rdr-boat.is-label-hidden .rdr-boat__label) {
+        visibility: hidden;
     }
     :global(.rdr-landmark) {
         background: none;
