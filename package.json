@@ -1,6 +1,6 @@
 {
     "name": "windy-plugin-rhum-live",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Plugin Windy : suivi en direct des skippers de la Route du Rhum",
     "main": "dist/plugin.min.js",
     "type": "module",

@@ -187,14 +187,12 @@
         statusLabel,
     } from './api';
     import { boatIcon, landmarkIcon } from './boatIcon';
+    import { FINISH, START, courseLine } from './course';
     import { boatPopupHtml } from './popup';
 
     import type { RhumBoat, RhumClass, RhumRanking } from './rhumTypes';
 
     const { title } = config;
-
-    const START: [number, number] = [48.6493, -2.0257]; // Saint-Malo
-    const FINISH: [number, number] = [16.2241, -61.532]; // Pointe-à-Pitre
 
     // Le site publie un classement par heure (`prochain`) et l'API est cachée 60 s.
     const MIN_DELAY = 60_000;
@@ -227,6 +225,7 @@
     const boatsOnMap = new Map<string, BoatOnMap>();
     const classLayers = new Map<string, L.LayerGroup>();
     let landmarks: L.Marker[] = [];
+    let course: L.Polyline | null = null;
     let popup: L.Popup | null = null;
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -521,6 +520,15 @@
     };
 
     const addLandmarks = () => {
+        // Parcours théorique, sous les bateaux
+        course = L.polyline(courseLine(), {
+            color: '#ffffff',
+            weight: 2,
+            opacity: 0.75,
+            dashArray: '6 8',
+            interactive: false,
+        }).addTo(map);
+
         landmarks = [
             L.marker(START, { icon: landmarkIcon('Saint-Malo', 'start'), interactive: false }),
             L.marker(FINISH, { icon: landmarkIcon('Pointe-à-Pitre', 'finish'), interactive: false }),
@@ -535,6 +543,8 @@
         boatsOnMap.clear();
         landmarks.forEach(m => m.remove());
         landmarks = [];
+        course?.remove();
+        course = null;
     };
 
     // ---------- Rafraîchissement ----------
