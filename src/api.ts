@@ -56,17 +56,6 @@ export const wixThumb = (mediaId: string | undefined, size: number): string | nu
 export const ficheUrl = (boat: RhumBoat): string | null =>
     boat.fiche ? `${SITE_URL}${boat.fiche}` : null;
 
-const STATUS_LABELS: Record<string, string> = {
-    RAC: 'En course',
-    ARV: 'Arrivé',
-    FIN: 'Arrivé',
-    ABD: 'Abandon',
-    DNF: 'Abandon',
-    DNS: 'Non partant',
-};
-
-export const statusLabel = (code: string): string => STATUS_LABELS[code] ?? code;
-
 /** Part du parcours effectuée (0 à 1), d'après la distance au but */
 export const progressOf = (boat: RhumBoat, distance: number): number | null =>
     Number.isFinite(boat.dtf) && distance > 0
@@ -79,48 +68,8 @@ export const rankChange = (boat: RhumBoat): number | null =>
         ? (boat.rangAvant as number) - (boat.rang as number)
         : null;
 
-/** « 1er », « 2e », « 3e »… */
-export const ordinal = (rank: number | null | undefined): string =>
-    Number.isFinite(rank) ? `${rank}${rank === 1 ? 'er' : 'e'}` : '–';
-
 export const escapeHtml = (value: unknown): string =>
     String(value ?? '').replace(
         /[&<>"']/g,
         c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string,
     );
-
-const numberFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
-
-export const formatNumber = (value: number | null | undefined, unit = ''): string =>
-    Number.isFinite(value) ? `${numberFormat.format(value as number)}${unit}` : '–';
-
-const timeFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
-const dateTimeFormat = new Intl.DateTimeFormat('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-});
-
-export const formatTime = (iso: string | number | undefined): string => {
-    const date = iso === undefined ? NaN : new Date(iso).getTime();
-    return Number.isFinite(date) ? timeFormat.format(date) : '–';
-};
-
-export const formatDateTime = (iso: string | undefined): string => {
-    const date = iso ? Date.parse(iso) : NaN;
-    return Number.isFinite(date) ? dateTimeFormat.format(date) : '–';
-};
-
-/** « 1 j 21 h » écoulé depuis le départ */
-export const formatElapsed = (fromIso: string, to: number): string => {
-    const start = Date.parse(fromIso);
-    if (!Number.isFinite(start) || to < start) {
-        return '–';
-    }
-    const totalMinutes = Math.floor((to - start) / 60_000);
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const minutes = totalMinutes % 60;
-    return days > 0 ? `${days} j ${hours} h` : `${hours} h ${String(minutes).padStart(2, '0')}`;
-};

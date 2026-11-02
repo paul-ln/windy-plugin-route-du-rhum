@@ -2,7 +2,7 @@ import type { ExternalPluginConfig } from '@windy/interfaces';
 
 const config: ExternalPluginConfig = {
     name: 'windy-plugin-rhum-live',
-    version: '0.2.1',
+    version: '0.3.0',
     icon: '⛵',
     title: 'Route du Rhum : suivi en direct',
     description:

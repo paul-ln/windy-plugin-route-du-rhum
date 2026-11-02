@@ -1,11 +1,11 @@
 <div class="plugin__mobile-header">{title}</div>
-<section class="plugin__content rdr" class:rdr--mobile={isMobileOrTablet}>
+<section class="plugin__content rdr" class:rdr--mobile={isMobileOrTablet} lang={t.lang}>
     <header class="rdr-head">
         {#if !isMobileOrTablet}
             <button
                 class="rdr-icon-btn"
-                title="Retour au menu"
-                aria-label="Retour au menu"
+                title={t.back}
+                aria-label={t.back}
                 on:click={() => bcast.emit('rqstOpen', 'menu')}
             >
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5" /></svg>
@@ -15,8 +15,8 @@
         <button
             class="rdr-icon-btn"
             class:is-loading={loading}
-            title="Actualiser les positions"
-            aria-label="Actualiser les positions"
+            title={t.refresh}
+            aria-label={t.refresh}
             disabled={loading}
             on:click={refresh}
         >
@@ -27,18 +27,15 @@
     </header>
 
     {#if error}
-        <p class="rdr-error" role="alert">
-            Le classement n’a pas pu être chargé ({error}). Nouvel essai automatique dans 5 minutes,
-            ou utilisez le bouton d’actualisation.
-        </p>
+        <p class="rdr-error" role="alert">{t.loadError(error)}</p>
     {/if}
 
     {#if !ranking && !error}
-        <p class="rdr-muted">Chargement des positions…</p>
+        <p class="rdr-muted">{t.loading}</p>
     {/if}
 
     {#if ranking}
-        <figure class="rdr-route" aria-label="Progression des leaders de chaque classe">
+        <figure class="rdr-route" aria-label={t.routeLabel}>
             <div class="rdr-route__track">
                 <span class="rdr-route__line" />
                 {#each leaders as { cls, boat, progress } (cls.cle)}
@@ -48,33 +45,31 @@
                         class:is-selected={boat.id === selectedId}
                         style:left="{progress * 100}%"
                         style:--c={cls.couleur}
-                        title="{cls.nom} : {skipperName(boat)}, {Math.round(progress * 100)} %"
-                        aria-label="Leader {cls.nom} : {skipperName(boat)}"
+                        title="{t.leaderLabel(cls.nom, skipperName(boat))}, {t.courseDone(Math.round(progress * 100))}"
+                        aria-label={t.leaderLabel(cls.nom, skipperName(boat))}
                         on:click={() => select(boat.id, true)}
                     />
                 {/each}
             </div>
             <figcaption class="rdr-route__ends">
                 <span>Saint-Malo</span>
-                <span class="rdr-muted">{formatNumber(ranking.distance)} milles</span>
+                <span class="rdr-muted">{t.num(ranking.distance)} {t.miles}</span>
                 <span>Pointe-à-Pitre</span>
             </figcaption>
         </figure>
 
         <p class="rdr-meta">
-            En course depuis <strong>{formatElapsed(ranking.depart, now)}</strong>. Positions de
-            {formatTime(ranking.maj)}{#if nextRefreshAt}, prochaine mise à jour vers {formatTime(
-                    nextRefreshAt,
-                )}{/if}.
+            {t.racingFor} <strong>{t.elapsed(ranking.depart, now)}</strong>. {t.positionsAt}
+            {t.time(ranking.maj)}{#if nextRefreshAt}, {t.nextUpdate} {t.time(nextRefreshAt)}{/if}.
         </p>
 
-        <div class="rdr-chips" role="group" aria-label="Classes affichées sur la carte">
+        <div class="rdr-chips" role="group" aria-label={t.classesLabel}>
             {#each ranking.classes as cls (cls.cle)}
                 <button
                     class="rdr-chip"
                     style:--c={cls.couleur}
                     aria-pressed={!hiddenClasses.has(cls.cle)}
-                    title={hiddenClasses.has(cls.cle) ? 'Afficher sur la carte' : 'Masquer de la carte'}
+                    title={hiddenClasses.has(cls.cle) ? t.showOnMap : t.hideFromMap}
                     on:click={() => toggleClass(cls.cle)}
                 >
                     <span class="rdr-chip__dot" />
@@ -87,7 +82,7 @@
         <label class="rdr-switch">
             <input type="checkbox" bind:checked={showLabels} on:change={onLabelsChange} />
             <span class="rdr-switch__track"><span class="rdr-switch__thumb" /></span>
-            Afficher les noms des skippers sur la carte
+            {t.showNames}
         </label>
 
         <label class="rdr-search">
@@ -96,8 +91,8 @@
             </svg>
             <input
                 type="search"
-                placeholder="Rechercher un skipper, un bateau ou une voile"
-                aria-label="Rechercher un skipper, un bateau ou un numéro de voile"
+                placeholder={t.searchPlaceholder}
+                aria-label={t.searchLabel}
                 bind:value={search}
             />
         </label>
@@ -108,7 +103,7 @@
                     <h2 class="rdr-class__title">
                         {cls.nom}
                         <span class="rdr-class__count">
-                            {query ? `${cls.lignes.length} sur ${cls.partants}` : `${cls.partants} bateaux`}
+                            {query ? t.matchCount(cls.lignes.length, cls.partants) : t.boatCount(cls.partants)}
                         </span>
                     </h2>
                     {#each cls.lignes as boat (boat.id)}
@@ -124,7 +119,12 @@
                             <span class="rdr-row__rank">
                                 {boat.rang ?? '–'}
                                 {#if change}
-                                    <span class="rdr-trend" class:rdr-trend--up={change > 0} class:rdr-trend--down={change < 0}>
+                                    <span
+                                        class="rdr-trend"
+                                        class:rdr-trend--up={change > 0}
+                                        class:rdr-trend--down={change < 0}
+                                        title={change > 0 ? t.placesGained(change) : t.placesLost(-change)}
+                                    >
                                         {change > 0 ? '▲' : '▼'}{Math.abs(change)}
                                     </span>
                                 {/if}
@@ -135,11 +135,11 @@
                             </span>
                             <span class="rdr-row__nums">
                                 {#if boat.statut !== 'RAC'}
-                                    <span class="rdr-row__status">{statusLabel(boat.statut)}</span>
+                                    <span class="rdr-row__status">{t.status(boat.statut)}</span>
                                 {:else}
-                                    <span class="rdr-row__speed">{formatNumber(boat.vitesse)}<small>nds</small></span>
+                                    <span class="rdr-row__speed">{t.num(boat.vitesse)}<small>{t.knots}</small></span>
                                     <span class="rdr-row__gap">
-                                        {boat.rang === 1 ? 'en tête' : `+${formatNumber(boat.dtl)} mn`}
+                                        {boat.rang === 1 ? t.leading : `+${t.num(boat.dtl)} ${t.nauticalMiles}`}
                                     </span>
                                 {/if}
                             </span>
@@ -150,19 +150,15 @@
                     {/each}
                 </section>
             {:else}
-                <p class="rdr-muted rdr-empty">
-                    Aucun bateau ne correspond à « {search.trim()} ». Vérifiez l’orthographe ou réaffichez
-                    les classes masquées.
-                </p>
+                <p class="rdr-muted rdr-empty">{t.noMatch(search.trim())}</p>
             {/each}
         </div>
 
         <footer class="rdr-footer">
             <p>
-                Données <a href={SITE_URL} target="_blank" rel="noopener">routedurhum.com</a>, classement
-                officiel publié toutes les heures.
+                {t.dataFrom} <a href={SITE_URL} target="_blank" rel="noopener">routedurhum.com</a>{t.dataFromEnd}
             </p>
-            <p>Plugin réalisé par <strong>Paulen</strong></p>
+            <p>{t.madeBy} <strong>Paulen</strong></p>
         </footer>
     {/if}
 </section>
@@ -174,18 +170,16 @@
     import { onDestroy, onMount } from 'svelte';
 
     import config from './pluginConfig';
+    import store from '@windy/store';
     import {
         SITE_URL,
         fetchRanking,
-        formatElapsed,
-        formatNumber,
-        formatTime,
         hasPosition,
         progressOf,
         rankChange,
         skipperName,
-        statusLabel,
     } from './api';
+    import { messages, resolveLang } from './i18n';
     import { boatIcon, landmarkIcon } from './boatIcon';
     import { FINISH, START, courseLine } from './course';
     import { boatPopupHtml } from './popup';
@@ -216,6 +210,11 @@
     let loading = false;
     let now = Date.now();
     let nextRefreshAt: number | null = null;
+
+    // Langue de Windy (par défaut celle du navigateur) : français ou anglais
+    let lang = resolveLang(store.get('usedLang') || navigator.language);
+    $: t = messages(lang);
+    const onLangChange = (code: string) => (lang = resolveLang(code));
 
     let hiddenClasses = new Set<string>();
     let showLabels = false;
@@ -300,7 +299,15 @@
         });
 
     const popupHtml = (entry: BoatOnMap) =>
-        boatPopupHtml(entry.boat, entry.cls, ranking?.distance ?? 0);
+        boatPopupHtml(entry.boat, entry.cls, ranking?.distance ?? 0, messages(lang));
+
+    // Retraduit la fiche ouverte quand la langue change
+    $: if (lang) {
+        const selected = selectedId ? boatsOnMap.get(selectedId) : undefined;
+        if (popup && selected) {
+            popup.setContent(popupHtml(selected));
+        }
+    }
 
     const zIndexFor = (entry: BoatOnMap) =>
         entry.boat.id === selectedId ? 2000 : entry.boat.rang === 1 ? 1000 : 0;
@@ -618,6 +625,7 @@
         clockTimer = setInterval(() => (now = Date.now()), 60_000);
         map.on('zoomend', scheduleDeclutter);
         map.on('moveend', scheduleDeclutter);
+        store.on('usedLang', onLangChange);
         // Les polices changent la largeur des étiquettes une fois chargées
         document.fonts?.ready.then(scheduleDeclutter);
     });
@@ -626,6 +634,7 @@
         destroyed = true;
         map.off('zoomend', scheduleDeclutter);
         map.off('moveend', scheduleDeclutter);
+        store.off('usedLang', onLangChange);
         if (declutterFrame !== null) {
             cancelAnimationFrame(declutterFrame);
         }

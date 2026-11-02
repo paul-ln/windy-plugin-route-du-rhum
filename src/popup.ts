@@ -1,34 +1,30 @@
-import {
-    escapeHtml,
-    ficheUrl,
-    formatNumber,
-    ordinal,
-    progressOf,
-    rankChange,
-    skipperName,
-    statusLabel,
-    wixThumb,
-} from './api';
+import { escapeHtml, ficheUrl, progressOf, rankChange, skipperName, wixThumb } from './api';
+import type { Messages } from './i18n';
 import type { RhumBoat, RhumClass } from './rhumTypes';
 
-const trendHtml = (boat: RhumBoat): string => {
+const trendHtml = (boat: RhumBoat, t: Messages): string => {
     const change = rankChange(boat);
     if (!change) {
         return '';
     }
     const places = Math.abs(change);
     return change > 0
-        ? `<span class="rdr-trend rdr-trend--up" title="${places} place(s) gagnée(s)">▲${places}</span>`
-        : `<span class="rdr-trend rdr-trend--down" title="${places} place(s) perdue(s)">▼${places}</span>`;
+        ? `<span class="rdr-trend rdr-trend--up" title="${escapeHtml(t.placesGained(places))}">▲${places}</span>`
+        : `<span class="rdr-trend rdr-trend--down" title="${escapeHtml(t.placesLost(places))}">▼${places}</span>`;
 };
 
 const stat = (label: string, value: string, unit = '', extra = '') =>
-    `<div class="rdr-pop__stat"><dt>${label}</dt><dd>${extra}${escapeHtml(value)}${
-        unit ? `<small>${unit}</small>` : ''
+    `<div class="rdr-pop__stat"><dt>${escapeHtml(label)}</dt><dd>${extra}${escapeHtml(value)}${
+        unit ? `<small>${escapeHtml(unit)}</small>` : ''
     }</dd></div>`;
 
 /** Contenu HTML du popup d'un bateau. Toutes les données externes sont échappées. */
-export const boatPopupHtml = (boat: RhumBoat, cls: RhumClass, distance: number): string => {
+export const boatPopupHtml = (
+    boat: RhumBoat,
+    cls: RhumClass,
+    distance: number,
+    t: Messages,
+): string => {
     const photo = wixThumb(boat.photo, 128);
     const fiche = ficheUrl(boat);
     const progress = progressOf(boat, distance);
@@ -40,23 +36,23 @@ export const boatPopupHtml = (boat: RhumBoat, cls: RhumClass, distance: number):
             : `<svg class="rdr-pop__arrow" viewBox="0 0 12 12" style="transform:rotate(${heading}deg)" aria-hidden="true"><path d="M6 1 10 10 6 8 2 10Z"/></svg>`;
     const isLeader = boat.rang === 1;
 
-    return `<div class="rdr-pop" style="--c:${color}">
+    return `<div class="rdr-pop" lang="${t.lang}" style="--c:${color}">
         <div class="rdr-pop__head">
             ${photo ? `<img class="rdr-pop__photo" src="${escapeHtml(photo)}" alt="" width="60" height="60" />` : ''}
             <div class="rdr-pop__id">
                 <div class="rdr-pop__rank${isLeader ? ' is-leader' : ''}">
-                    <span class="rdr-pop__dot"></span>${ordinal(boat.rang)} en ${escapeHtml(cls.nom)} ${trendHtml(boat)}
+                    <span class="rdr-pop__dot"></span>${escapeHtml(t.rankIn(boat.rang, cls.nom))} ${trendHtml(boat, t)}
                 </div>
                 <div class="rdr-pop__name">${escapeHtml(skipperName(boat))}</div>
                 <div class="rdr-pop__boat">${escapeHtml(boat.bateau)}</div>
             </div>
         </div>
-        ${boat.statut !== 'RAC' ? `<div class="rdr-pop__status">${escapeHtml(statusLabel(boat.statut))}</div>` : ''}
+        ${boat.statut !== 'RAC' ? `<div class="rdr-pop__status">${escapeHtml(t.status(boat.statut))}</div>` : ''}
         <dl class="rdr-pop__stats">
-            ${stat('Vitesse', formatNumber(boat.vitesse), 'nds')}
-            ${stat('VMG', formatNumber(boat.vmg), 'nds')}
-            ${stat('Cap', formatNumber(boat.cap), '°', arrow)}
-            ${isLeader ? stat('Écart', 'En tête') : stat('Écart', formatNumber(boat.dtl), 'mn')}
+            ${stat(t.speed, t.num(boat.vitesse), t.knots)}
+            ${stat('VMG', t.num(boat.vmg), t.knots)}
+            ${stat(t.heading, t.num(boat.cap), '°', arrow)}
+            ${isLeader ? stat(t.gap, t.leadingShort) : stat(t.gap, t.num(boat.dtl), t.nauticalMiles)}
         </dl>
         ${
             progress === null
@@ -64,11 +60,11 @@ export const boatPopupHtml = (boat: RhumBoat, cls: RhumClass, distance: number):
                 : `<div class="rdr-pop__progress">
                     <div class="rdr-pop__bar"><span style="width:${(progress * 100).toFixed(1)}%"></span></div>
                     <div class="rdr-pop__remain">
-                        <span>${Math.round(progress * 100)} % du parcours</span>
-                        <span>${escapeHtml(formatNumber(boat.dtf))} milles restants</span>
+                        <span>${escapeHtml(t.courseDone(Math.round(progress * 100)))}</span>
+                        <span>${escapeHtml(t.milesToGo(t.num(boat.dtf)))}</span>
                     </div>
                 </div>`
         }
-        ${fiche ? `<a class="rdr-pop__link" href="${escapeHtml(fiche)}" target="_blank" rel="noopener">Voir la fiche du skipper</a>` : ''}
+        ${fiche ? `<a class="rdr-pop__link" href="${escapeHtml(fiche)}" target="_blank" rel="noopener">${escapeHtml(t.skipperProfile)}</a>` : ''}
     </div>`;
 };
