@@ -1,7 +1,7 @@
 import type { ExternalPluginConfig } from '@windy/interfaces';
 
 const config: ExternalPluginConfig = {
-    name: 'windy-plugin-route-du-rhum',
+    name: 'windy-plugin-rhum-live',
     version: '0.1.0',
     icon: '⛵',
     title: 'Route du Rhum : suivi en direct',
@@ -12,7 +12,7 @@ const config: ExternalPluginConfig = {
     desktopUI: 'rhpane',
     desktopWidth: 360,
     mobileUI: 'small',
-    routerPath: '/route-du-rhum',
+    routerPath: '/rhum-live',
     private: true,
 };
 
